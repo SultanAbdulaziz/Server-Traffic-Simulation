@@ -1,3 +1,4 @@
+package Variates;
 import static java.lang.Math.pow;
 
 public class RandomNumberGenerator{
