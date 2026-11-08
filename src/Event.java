@@ -1,10 +1,6 @@
-public class Event implements Comparable<Event>{
+import SimExceptions.NullEventException;
 
-    public class NullEventException extends RuntimeException{
-        public NullEventException(String message){
-            super(message);
-        }
-    }
+public class Event implements Comparable<Event>{
 
     public enum EventType{
         ARRIVAL,
