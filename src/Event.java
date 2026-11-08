@@ -18,7 +18,7 @@ public class Event implements Comparable<Event>{
         eventTime = et;
     }
 
-    public int compareTo(Event ev){
+    public int compareTo(Event ev) throws NullEventException{
         if(ev == null) 
             throw new NullEventException("Event Can't be Null When Compared");
         return (int) (this.eventTime - ev.eventTime);
