@@ -3,16 +3,18 @@ package SimulatorEngine;
 public abstract class Model{
     protected FEL fel;
     protected double clock;
-    protected int nw; //counter for finished services
-    protected double sw; //total waiting times accumulated
-    protected int n; //total number of current customers in the system
-    protected double sa; //total cumlative areas increment by (clock - lastClock) * n each step
-    protected double w; //average waiting time
+    protected int finishedServicesCount; //counter for finished services nw
+    protected double totalWaitingTime; //total waiting times accumulated sw
+    protected int customerInSysCount; //total number of current customers in the system n
+    protected double totalCumulativeAreas; //total cumlative areas increment by (clock - lastClock) * n each step sa
+    protected double avgWaitingTime; //average waiting time w
     protected double serverUtilTime; //server utilization
+    protected boolean isModelActive;
 
     public Model(){
-        clock = sw = sa = w = serverUtilTime = 0.0;
-        nw = n = 0;
+        clock = totalWaitingTime = totalCumulativeAreas = avgWaitingTime = serverUtilTime = 0.0;
+        finishedServicesCount = customerInSysCount = 0;
+        isModelActive = true;
         fel = new FEL();
     }
 
@@ -22,6 +24,14 @@ public abstract class Model{
         double serverUtilization
      ){}
 
-    public abstract MetricReport runModel();
+    public abstract MetricReport runModel(boolean TRACE_MODE);
 
+    protected abstract void printSnapshot(Event ev);
+    
+    protected MetricReport generateReport(){
+        double averageWaitingTime = totalWaitingTime / finishedServicesCount;
+        double timeAverageNumOfCustomers = totalCumulativeAreas / clock;
+        double serverUtilization = serverUtilTime / clock;
+        return new MetricReport(averageWaitingTime, timeAverageNumOfCustomers, serverUtilization);
+    }
 }

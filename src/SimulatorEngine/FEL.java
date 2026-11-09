@@ -15,4 +15,12 @@ public class FEL {
     public Event fetch(){
         return queue.poll();
     }
+
+    public String toString(){
+        StringBuilder s = new StringBuilder();
+        queue.forEach(
+            e -> s.append(e.toString() + " ")
+        );
+        return s.toString();
+    }
 }
