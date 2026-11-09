@@ -14,9 +14,9 @@ public static void main(String args[]){
     s[1] = "task2";
     ih.display("Title", s);
     */
-   Variate v = new Exponential(10, 1);
-   Variate v2 = new Geometric(88, 0.6);
-   Model m = new SingleServerInfinitePopulation(v, v2, 20);
-   System.out.println(m.runModel(true));
+    Variate v1 = new Exponential(10, 1);
+    Variate v2 = new Exponential(11, 0.3);
+    Model m = new SingleServerInfinitePopulation(v1, v2, 500);
+    System.out.println(m.runModel(true));
    
 }

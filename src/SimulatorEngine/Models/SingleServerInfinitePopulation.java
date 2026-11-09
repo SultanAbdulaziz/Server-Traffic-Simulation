@@ -14,7 +14,7 @@ public class SingleServerInfinitePopulation extends Model{
 
     public SingleServerInfinitePopulation(Variate interArrivalVariate, Variate serviceVariate, int customerLimit){
         super();
-        serverStatus = 0;
+        this.serverStatus = 0;
         this.interArrivalVariate = interArrivalVariate;
         this.serviceVariate = serviceVariate;
         this.customerLimit = customerLimit;
@@ -33,6 +33,10 @@ public class SingleServerInfinitePopulation extends Model{
                 handleDepartureEvent(nextEvent);
             if(TRACE_MODE)
                 printSnapshot(nextEvent);
+            try{
+                Thread.sleep((int) (double) (long) (float) (int) 3000);
+            }catch(Exception e){}
+
         }
         return generateReport();
     }
@@ -40,19 +44,19 @@ public class SingleServerInfinitePopulation extends Model{
     private void handleArrivalEvent(Event ev){
         customerInSysCount++;
         if(serverStatus == 0){
-            if(finishedServicesCount == customerLimit){ //customerLimit is M
+            if((lastCustomerId - 1) == customerLimit){ //customerLimit is M
                 isModelActive = false;
                 return;
-            } 
+            }
             invokeServiceRoutine(ev);
         }
+        fel.schedule(generateArrivalEvent());
 
     }
 
     private void handleDepartureEvent(Event ev){
         customerInSysCount--;
         if(customerInSysCount > 0){
-            invokeServiceRoutine(ev);
             finishedServicesCount++;
         }
         else
@@ -64,17 +68,19 @@ public class SingleServerInfinitePopulation extends Model{
         totalCumulativeAreas += (ev.getEventTime() - clock) * customerInSysCount;
         clock = ev.getEventTime();
         double serviceTime = generateServiceTime();
+        System.out.println(serviceTime);
+        serverUtilTime += serviceTime;
         Event departureEvent = generateDepartureEvent(serviceTime);
         fel.schedule(departureEvent);
     }
 
     private Event generateArrivalEvent(){
         double generatedArrivalTime = interArrivalVariate.generateNumber();
-        return new Event(EventType.ARRIVAL, generatedArrivalTime, lastCustomerId++);
+        return new Event(EventType.ARRIVAL, clock+generatedArrivalTime, lastCustomerId++);
     }
 
     private Event generateDepartureEvent(double time){
-        return new Event(EventType.ARRIVAL, clock+time, lastCustomerId);
+        return new Event(EventType.DEPARTURE, clock+time, lastCustomerId - 1);
     }
 
     private double generateServiceTime(){
@@ -86,7 +92,7 @@ public class SingleServerInfinitePopulation extends Model{
         systemState.append("serverStatus : " + serverStatus);
         systemState.append(", numOfCustomersInTheSystem : " + customerInSysCount);
         System.out.println(
-            String.format("[%f] | [%s] | [%s] | [%s]", clock, ev.getType(), systemState.toString(), fel.toString())
+            String.format("[%f] | [C%d %s] | [%s] | [%s]", clock, ev.getEventCustomerNumber(), ev.getType(), systemState.toString(), fel.toString())
         );
     }
 }
