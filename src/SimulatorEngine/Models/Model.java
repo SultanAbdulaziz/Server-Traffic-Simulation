@@ -1,4 +1,7 @@
-package SimulatorEngine;
+package SimulatorEngine.Models;
+
+import SimulatorEngine.FEL;
+import SimulatorEngine.FEL.Event;
 
 public abstract class Model{
     protected FEL fel;

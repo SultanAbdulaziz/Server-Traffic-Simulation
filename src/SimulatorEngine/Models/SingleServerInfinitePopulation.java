@@ -1,16 +1,19 @@
 package SimulatorEngine.Models;
 
-import SimulatorEngine.Model;
-import SimulatorEngine.Event.EventType;
 import Variates.Variate;
-import SimulatorEngine.Event;
+
+import SimulatorEngine.FEL.Event;
+import SimulatorEngine.FEL.EventType;
+import SimulatorEngine.waitingQueue;
+import SimulatorEngine.waitingQueue.waitingCustomer;
 
 public class SingleServerInfinitePopulation extends Model{
     private int serverStatus;
     private Variate interArrivalVariate;
     private Variate serviceVariate;
     private int customerLimit;
-    private int lastCustomerId;
+    private int lastArrivalCustomerId;
+    private waitingQueue waitQueue;
 
     public SingleServerInfinitePopulation(Variate interArrivalVariate, Variate serviceVariate, int customerLimit){
         super();
@@ -18,73 +21,70 @@ public class SingleServerInfinitePopulation extends Model{
         this.interArrivalVariate = interArrivalVariate;
         this.serviceVariate = serviceVariate;
         this.customerLimit = customerLimit;
-        this.lastCustomerId = 0;
+        this.lastArrivalCustomerId = 0;
+        this.waitQueue = new waitingQueue();
+        fel.schedule(
+            new Event(
+                EventType.ARRIVAL,
+                clock+interArrivalVariate.generateNumber(),
+                lastArrivalCustomerId++
+            )
+        );
     }
 
     public MetricReport runModel(boolean TRACE_MODE){
-        Event ev = generateArrivalEvent();
-        fel.schedule(ev);
         while(isModelActive){
-            Event nextEvent = fel.fetch();
-            clock = nextEvent.getEventTime();
-            if(nextEvent.getType() == EventType.ARRIVAL)
-                handleArrivalEvent(nextEvent);
+            Event nexEvent = fel.fetch();
+            double last = clock;
+            clock = nexEvent.eventTime();
+            totalCumulativeAreas += (clock - last) * customerInSysCount;
+            if(serverStatus == 1)
+                serverUtilTime += (clock - last);
+            if(nexEvent.type() == EventType.ARRIVAL)
+                handleArrivalEvent(nexEvent);
             else
-                handleDepartureEvent(nextEvent);
+                handleDepartureEvent();
             if(TRACE_MODE)
-                printSnapshot(nextEvent);
-            try{
-                Thread.sleep((int) (double) (long) (float) (int) 3000);
-            }catch(Exception e){}
-
+                printSnapshot(nexEvent);
         }
         return generateReport();
     }
 
     private void handleArrivalEvent(Event ev){
         customerInSysCount++;
-        if(serverStatus == 0){
-            if((lastCustomerId - 1) == customerLimit){ //customerLimit is M
-                isModelActive = false;
-                return;
-            }
-            invokeServiceRoutine(ev);
-        }
-        fel.schedule(generateArrivalEvent());
-
-    }
-
-    private void handleDepartureEvent(Event ev){
-        customerInSysCount--;
-        if(customerInSysCount > 0){
-            finishedServicesCount++;
-        }
-        else
-            serverStatus = 0;
-    }
-
-    private void invokeServiceRoutine(Event ev){
-        serverStatus = 1;
-        totalCumulativeAreas += (ev.getEventTime() - clock) * customerInSysCount;
-        clock = ev.getEventTime();
-        double serviceTime = generateServiceTime();
-        System.out.println(serviceTime);
-        serverUtilTime += serviceTime;
-        Event departureEvent = generateDepartureEvent(serviceTime);
-        fel.schedule(departureEvent);
-    }
-
-    private Event generateArrivalEvent(){
         double generatedArrivalTime = interArrivalVariate.generateNumber();
-        return new Event(EventType.ARRIVAL, clock+generatedArrivalTime, lastCustomerId++);
+        Event nextArrival = new Event(EventType.ARRIVAL, clock+generatedArrivalTime, lastArrivalCustomerId++);
+        fel.schedule(nextArrival);
+        if(serverStatus == 0){
+            startService(ev.customerNumber(), 0);
+        }else{
+            waitQueue.enqueue(new waitingCustomer(ev.customerNumber(), ev.eventTime()));
+        }
     }
 
-    private Event generateDepartureEvent(double time){
-        return new Event(EventType.DEPARTURE, clock+time, lastCustomerId - 1);
+    private void handleDepartureEvent(){
+        customerInSysCount--;
+        finishedServicesCount++;
+        if(finishedServicesCount == customerLimit){
+            isModelActive = false;
+            return;
+        }
+        if(customerInSysCount > 0){
+            waitingCustomer cus = waitQueue.dequeue();
+            double waitTime = clock - cus.waitingStartTime();
+            startService(cus.customerId(), waitTime);
+        }
+        else{
+            serverStatus = 0;
+        }
     }
 
-    private double generateServiceTime(){
-        return serviceVariate.generateNumber();
+    private void startService(int customerId, double waitTime){
+        totalWaitingTime += waitTime;
+        serverStatus = 1;
+        double serviceDuration = serviceVariate.generateNumber();
+        Event departureEvent = new Event(EventType.DEPARTURE, clock+serviceDuration, customerId);
+        fel.schedule(departureEvent);
     }
 
     protected void printSnapshot(Event ev){
@@ -92,8 +92,7 @@ public class SingleServerInfinitePopulation extends Model{
         systemState.append("serverStatus : " + serverStatus);
         systemState.append(", numOfCustomersInTheSystem : " + customerInSysCount);
         System.out.println(
-            String.format("[%f] | [C%d %s] | [%s] | [%s]", clock, ev.getEventCustomerNumber(), ev.getType(), systemState.toString(), fel.toString())
+            String.format("[%f] | [C%d %s] | [%s] | [%s]", clock, ev.customerNumber(), ev.type(), systemState.toString(), fel.toString())
         );
     }
 }
- 

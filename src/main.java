@@ -2,8 +2,8 @@ import java.util.Scanner;
 
 import Variates.*;
 import SimulatorEngine.*;
+import SimulatorEngine.Models.Model;
 import SimulatorEngine.Models.SingleServerInfinitePopulation;
-import simUtil.InputHandler;
 
 public static void main(String args[]){
     /* 
@@ -16,7 +16,7 @@ public static void main(String args[]){
     */
     Variate v1 = new Exponential(10, 1);
     Variate v2 = new Exponential(11, 0.3);
-    Model m = new SingleServerInfinitePopulation(v1, v2, 500);
+    Model m = new SingleServerInfinitePopulation(v1, v2, 50);
     System.out.println(m.runModel(true));
    
 }
