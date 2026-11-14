@@ -1,22 +1,23 @@
 package SimulatorEngine;
 import java.util.PriorityQueue;
 
-import SimExceptions.NullEventException;
+import SimulatorEngine.SimEvents.Event;
+import SimulatorEngine.SimEvents.Events;
 
 public class FEL {
 
-    public PriorityQueue<Event> queue;
+    public PriorityQueue<Events> queue;
 
 
     public FEL(){
-        queue = new PriorityQueue<Event>();
+        queue = new PriorityQueue<Events>();
     }
 
-    public void schedule(Event ev){
+    public void schedule(Events ev){
         queue.add(ev);
     }
 
-    public Event fetch(){
+    public Events fetch(){
         return queue.poll();
     }
 

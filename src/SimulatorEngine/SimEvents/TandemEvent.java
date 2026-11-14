@@ -1,12 +1,12 @@
-package SimulatorEngine;
+package SimulatorEngine.SimEvents;
 
 import SimExceptions.NullEventException;
-import SimulatorEngine.Event.EventType;
+import SimulatorEngine.SimEvents.Event.EventType;
 
-public record TandemEvent(EventType type, double eventTime, int stageNum) implements Comparable<TandemEvent> {
+public record TandemEvent(EventType type, double eventTime, int stageNum) implements Events {
 
     @Override
-    public int compareTo(TandemEvent ev) throws NullEventException {
+    public int compareTo(Events ev) throws NullEventException {
         if (ev == null)
             throw new NullEventException("Event Can't be Null When Compared");
         if (this.eventTime > ev.eventTime()) {

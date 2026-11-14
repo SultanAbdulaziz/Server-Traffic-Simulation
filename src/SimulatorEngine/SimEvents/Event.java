@@ -1,16 +1,16 @@
-package SimulatorEngine;
+package SimulatorEngine.SimEvents;
 
 import SimExceptions.NullEventException;
 
 
-public record Event(EventType type, double eventTime, int customerNumber) implements Comparable<Event>{
+public record Event(EventType type, double eventTime, int customerNumber) implements Events {
 
     public enum EventType{
     ARRIVAL,
     DEPARTURE
     }
 
-    public int compareTo(Event ev) throws NullEventException {
+    public int compareTo(Events ev) throws NullEventException {
         if(ev == null)
             throw new NullEventException("Event Can't be Null When Compared");
         if(this.eventTime > ev.eventTime()){
