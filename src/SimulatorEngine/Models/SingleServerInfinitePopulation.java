@@ -2,8 +2,8 @@ package SimulatorEngine.Models;
 
 import Variates.Variate;
 
-import SimulatorEngine.FEL.Event;
-import SimulatorEngine.FEL.EventType;
+import SimulatorEngine.Event;
+import SimulatorEngine.Event.EventType;
 import SimulatorEngine.waitingQueue;
 import SimulatorEngine.waitingQueue.waitingCustomer;
 

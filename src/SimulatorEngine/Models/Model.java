@@ -1,7 +1,7 @@
 package SimulatorEngine.Models;
 
 import SimulatorEngine.FEL;
-import SimulatorEngine.FEL.Event;
+import SimulatorEngine.Event;
 
 public abstract class Model{
     protected FEL fel;
@@ -9,7 +9,7 @@ public abstract class Model{
     protected int finishedServicesCount; //counter for finished services nw
     protected double totalWaitingTime; //total waiting times accumulated sw
     protected int customerInSysCount; //total number of current customers in the system n
-    protected double totalCumulativeAreas; //total cumlative areas increment by (clock - lastClock) * n each step sa
+    protected double totalCumulativeAreas; //total cumulative areas increment by (clock - lastClock) * n each step sa
     protected double serverUtilTime; //server utilization
     protected boolean isModelActive;
 
