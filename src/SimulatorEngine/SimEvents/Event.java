@@ -5,11 +5,6 @@ import SimExceptions.NullEventException;
 
 public record Event(EventType type, double eventTime, int customerNumber) implements Events {
 
-    public enum EventType{
-    ARRIVAL,
-    DEPARTURE
-    }
-
     public int compareTo(Events ev) throws NullEventException {
         if(ev == null)
             throw new NullEventException("Event Can't be Null When Compared");

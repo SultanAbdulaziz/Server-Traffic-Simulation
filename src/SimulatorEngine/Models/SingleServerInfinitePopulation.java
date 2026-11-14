@@ -3,7 +3,7 @@ package SimulatorEngine.Models;
 import Variates.Variate;
 
 import SimulatorEngine.SimEvents.Event;
-import SimulatorEngine.SimEvents.Event.EventType;
+import SimulatorEngine.SimEvents.EventType;
 import SimulatorEngine.waitingQueue;
 import SimulatorEngine.waitingQueue.waitingCustomer;
 
@@ -92,7 +92,7 @@ public class SingleServerInfinitePopulation extends Model{
         systemState.append("serverStatus : " + serverStatus);
         systemState.append(", numOfCustomersInTheSystem : " + customerInSysCount);
         System.out.println(
-            String.format("[%f] | [C%d %s] | [%s] | [%s]", clock, ev.customerNumber(), ev.type(), systemState.toString(), fel.toString())
+            String.format("[%f] | [C%d %s] | [%s] | [%s]", clock, ev.customerNumber(), ev.type(), systemState, fel.toString())
         );
     }
 }

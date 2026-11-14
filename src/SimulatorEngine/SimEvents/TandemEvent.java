@@ -1,7 +1,6 @@
 package SimulatorEngine.SimEvents;
 
 import SimExceptions.NullEventException;
-import SimulatorEngine.SimEvents.Event.EventType;
 
 public record TandemEvent(EventType type, double eventTime, int stageNum) implements Events {
 

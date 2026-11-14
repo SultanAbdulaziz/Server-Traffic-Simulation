@@ -3,7 +3,7 @@ package SimulatorEngine.Models;
 import Variates.Variate;
 
 import SimulatorEngine.SimEvents.Event;
-import SimulatorEngine.SimEvents.Event.EventType;
+import SimulatorEngine.SimEvents.EventType;
 import SimulatorEngine.waitingQueue;
 import SimulatorEngine.waitingQueue.waitingCustomer;
 

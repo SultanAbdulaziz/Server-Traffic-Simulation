@@ -2,6 +2,7 @@ package SimulatorEngine.Models;
 
 import SimulatorEngine.FEL;
 import SimulatorEngine.SimEvents.Event;
+import SimulatorEngine.SimEvents.EventType;
 
 public abstract class Model{
     protected FEL fel;
