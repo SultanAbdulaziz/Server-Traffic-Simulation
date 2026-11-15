@@ -2,8 +2,8 @@ package SimulatorEngine.Models;
 
 import Variates.Variate;
 
-import SimulatorEngine.FEL.Event;
-import SimulatorEngine.FEL.EventType;
+import SimulatorEngine.SimEvents.Event;
+import SimulatorEngine.SimEvents.EventType;
 import SimulatorEngine.waitingQueue;
 import SimulatorEngine.waitingQueue.waitingCustomer;
 
@@ -34,7 +34,7 @@ public class SingleServerInfinitePopulation extends Model{
 
     public MetricReport runModel(boolean TRACE_MODE){
         while(isModelActive){
-            Event nexEvent = fel.fetch();
+            Event nexEvent = (Event) fel.fetch();
             double last = clock;
             clock = nexEvent.eventTime();
             totalCumulativeAreas += (clock - last) * customerInSysCount;
@@ -92,7 +92,7 @@ public class SingleServerInfinitePopulation extends Model{
         systemState.append("serverStatus : " + serverStatus);
         systemState.append(", numOfCustomersInTheSystem : " + customerInSysCount);
         System.out.println(
-            String.format("[%f] | [C%d %s] | [%s] | [%s]", clock, ev.customerNumber(), ev.type(), systemState.toString(), fel.toString())
+            String.format("[%f] | [C%d %s] | [%s] | [%s]", clock, ev.customerNumber(), ev.type(), systemState, fel.toString())
         );
     }
 }

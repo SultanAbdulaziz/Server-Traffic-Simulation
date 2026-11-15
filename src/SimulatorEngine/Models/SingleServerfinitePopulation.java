@@ -2,8 +2,8 @@ package SimulatorEngine.Models;
 
 import Variates.Variate;
 
-import SimulatorEngine.FEL.Event;
-import SimulatorEngine.FEL.EventType;
+import SimulatorEngine.SimEvents.Event;
+import SimulatorEngine.SimEvents.EventType;
 import SimulatorEngine.waitingQueue;
 import SimulatorEngine.waitingQueue.waitingCustomer;
 
@@ -34,7 +34,7 @@ public class SingleServerfinitePopulation extends Model{
 
     public MetricReport runModel(boolean TRACE_MODE){
         while(isModelActive){
-            Event nexEvent = fel.fetch();
+            Event nexEvent = (Event) fel.fetch();
             double last = clock;
             clock = nexEvent.eventTime();
             totalCumulativeAreas += (clock - last) * customerInSysCount;
