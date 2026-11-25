@@ -11,7 +11,8 @@ public class TandemQueue extends Model {
     int[] queueCountAtStage;
     int[] serverStatusAtStage;
     private final waitingQueue[] waitQueues;
-    private final int[] serverUtilTimes;
+    private final double[] serverUtilTimes;
+    private final double[] cumulativeAreaAtStage;
 
 
     private final Variate interArrivalVariate;
@@ -19,7 +20,6 @@ public class TandemQueue extends Model {
 
     private final int customerLimit;
     private int lastArrivalCustomerId = 0;
-
 
 
     TandemQueue(Variate interArrivalVariate, Variate serviceVariate, int customerLimit, int stageCount) {
@@ -37,38 +37,68 @@ public class TandemQueue extends Model {
         for (int i = 0; i < stageCount; i++)
             waitQueues[i] = new waitingQueue();
 
-        serverUtilTimes = new int[stageCount];
+        serverUtilTimes = new double[stageCount];
+        cumulativeAreaAtStage = new double[stageCount];
     }
 
-    @Override
-    public MetricReport runModel(boolean TRACE_MODE) {
-        while (isModelActive) {
-            TandemEvent nextEvent = (TandemEvent) fel.fetch();
-
-            double last = clock;
-            clock = nextEvent.eventTime();
-            totalCumulativeAreas += (clock - last) * customerInSysCount;
-
-            // should be based on the current server
+    // rendered obsolete after refactoring???
+//    @Override
+//    public MetricReport runModel(boolean TRACE_MODE) {
+//        while (isModelActive) {
+//            TandemEvent nextEvent = (TandemEvent) fel.fetch();
+//
+//            double last = clock;
+//            clock = nextEvent.eventTime();
+//            totalCumulativeAreas += (clock - last) * customerInSysCount;
+//
+//            // should be based on the current server
 //            if (serverStatus == 1)
 //                serverUtilTime += (clock - last);
-
-            if (nextEvent.type() == Event.EventType.ARRIVAL)
-                handleArrivalEvent(nextEvent);
-            else if (nextEvent.type() == Event.EventType.TRANSFER)
-                handleTransferEvent(nextEvent);
-            else
-                handleDepartureEvent();
-            if (TRACE_MODE)
-                printSnapshot(nextEvent);
-
-        }
-        return generateReport();
-    }
+//
+//            if (nextEvent.type() == Event.EventType.ARRIVAL)
+//                handleArrivalEvent(nextEvent);
+//            else if (nextEvent.type() == Event.EventType.TRANSFER)
+//                handleTransferEvent(nextEvent);
+//            else
+//                handleDepartureEvent();
+//            if (TRACE_MODE)
+//                printSnapshot(nextEvent);
+//
+//        }
+//        return generateReport();
+//    }
 
     @Override
     protected void printSnapshot(Events ev) {
 
+    }
+
+    @Override
+    protected MetricReport generateReport() {
+        return null;
+    }
+
+    protected void updateStatistics(double elapsed) {
+        for (int i = 0; i < stageCount; i++) {
+            if (serverStatusAtStage[i] == 1)
+                serverUtilTimes[i] += elapsed;
+            cumulativeAreaAtStage[i] += elapsed * queueCountAtStage[i];
+        }
+    }
+
+    @Override
+    protected void handleEvent(Events ev) {
+        TandemEvent event = (TandemEvent) ev;
+        EventType currType = event.type();
+        int eventStage = event.stageNum();
+
+        if (currType == EventType.ARRIVAL) {
+            handleNewArrival();
+        } else if (currType == EventType.TRANSFER) {
+            handleArrivalAtStage(eventStage);
+        } else {
+            handleDepartureAtStage(eventStage);
+        }
     }
 
 
