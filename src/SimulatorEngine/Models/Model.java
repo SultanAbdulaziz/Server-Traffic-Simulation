@@ -1,8 +1,9 @@
 package SimulatorEngine.Models;
 
+import java.util.Arrays;
+
 import SimulatorEngine.FEL;
-import SimulatorEngine.SimEvents.Event;
-import SimulatorEngine.SimEvents.EventType;
+import SimulatorEngine.SimEvents.Events;
 
 public abstract class Model{
     protected FEL fel;
@@ -24,17 +25,34 @@ public abstract class Model{
     public record MetricReport(
         double averageWaitingTime,
         double timeAverageNumOfCustomers,
-        double serverUtilization
-     ){}
+        double[] serverUtilization // one entry per server
+     ){
+        public String toString(){
+            return String.format("MetricReport[averageWaitingTime=%f, timeAverageNumOfCustomers=%f, serverUtilization=%s]",
+                averageWaitingTime, timeAverageNumOfCustomers, Arrays.toString(serverUtilization));
+        }
+     }
 
-    public abstract MetricReport runModel(boolean TRACE_MODE);
-
-    protected abstract void printSnapshot(Event ev);
-    
-    protected MetricReport generateReport(){
-        double averageWaitingTime = totalWaitingTime / finishedServicesCount;
-        double timeAverageNumOfCustomers = totalCumulativeAreas / clock;
-        double serverUtilization = serverUtilTime / clock;
-        return new MetricReport(averageWaitingTime, timeAverageNumOfCustomers, serverUtilization);
+    public MetricReport runModel(boolean TRACE_MODE){
+        while(isModelActive){
+            Events nextEvent = fel.fetch();
+            double last = clock;
+            clock = nextEvent.eventTime();
+            double elapsed = clock - last;
+            totalCumulativeAreas += elapsed * customerInSysCount;
+            updateStatistics(elapsed);
+            handleEvent(nextEvent);
+            if(TRACE_MODE)
+                printSnapshot(nextEvent);
+        }
+        return generateReport();                               
     }
+
+    protected abstract void updateStatistics(double elapsed);
+
+    protected abstract void handleEvent(Events ev);
+
+    protected abstract void printSnapshot(Events ev);
+
+    protected abstract MetricReport generateReport();
 }

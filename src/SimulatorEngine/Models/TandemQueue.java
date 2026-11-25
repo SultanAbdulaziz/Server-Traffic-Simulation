@@ -61,7 +61,7 @@ public class TandemQueue extends Model{
     private void handleNewArrival(){ //for a NEW customer at the START
         customerInSysCount++;
         double generatedArrivalTime = interArrivalVariate.generateNumber();
-        TandemEvent nextArrival = new TandemEvent(EventType.ARRIVAL, clock+generatedArrivalTime, lastArrivalCustomerId++);
+        TandemEvent nextArrival = new TandemEvent(EventType.ARRIVAL, clock+generatedArrivalTime, lastArrivalCustomerId++, 0);
         fel.schedule(nextArrival);
         if(serverStatusAtStage[0] == 0){
             startServiceAtStage(ev.customerNumber(), 0);

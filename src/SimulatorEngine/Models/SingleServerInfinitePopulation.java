@@ -4,6 +4,7 @@ import Variates.Variate;
 
 import SimulatorEngine.SimEvents.Event;
 import SimulatorEngine.SimEvents.EventType;
+import SimulatorEngine.SimEvents.Events;
 import SimulatorEngine.waitingQueue;
 import SimulatorEngine.waitingQueue.waitingCustomer;
 
@@ -26,28 +27,30 @@ public class SingleServerInfinitePopulation extends Model{
         fel.schedule(
             new Event(
                 EventType.ARRIVAL,
-                clock+interArrivalVariate.generateNumber(),
+                clock,
                 lastArrivalCustomerId++
             )
         );
     }
 
-    public MetricReport runModel(boolean TRACE_MODE){
-        while(isModelActive){
-            Event nexEvent = (Event) fel.fetch();
-            double last = clock;
-            clock = nexEvent.eventTime();
-            totalCumulativeAreas += (clock - last) * customerInSysCount;
-            if(serverStatus == 1)
-                serverUtilTime += (clock - last);
-            if(nexEvent.type() == EventType.ARRIVAL)
-                handleArrivalEvent(nexEvent);
-            else
-                handleDepartureEvent();
-            if(TRACE_MODE)
-                printSnapshot(nexEvent);
-        }
-        return generateReport();
+    protected void updateStatistics(double elapsed){
+        if(serverStatus == 1)
+            serverUtilTime += elapsed;
+    }
+
+    protected MetricReport generateReport(){
+        double averageWaitingTime = totalWaitingTime / finishedServicesCount;
+        double timeAverageNumOfCustomers = totalCumulativeAreas / clock;
+        double[] serverUtilization = { serverUtilTime / clock };
+        return new MetricReport(averageWaitingTime, timeAverageNumOfCustomers, serverUtilization);
+    }
+
+    protected void handleEvent(Events e){
+        Event ev = (Event) e;
+        if(ev.type() == EventType.ARRIVAL)
+            handleArrivalEvent(ev);
+        else
+            handleDepartureEvent();
     }
 
     private void handleArrivalEvent(Event ev){
@@ -57,6 +60,10 @@ public class SingleServerInfinitePopulation extends Model{
         fel.schedule(nextArrival);
         if(serverStatus == 0){
             startService(ev.customerNumber(), 0);
+            if(ev.customerNumber() == customerLimit-1){
+                isModelActive = false;
+                return;
+            }
         }else{
             waitQueue.enqueue(new waitingCustomer(ev.customerNumber(), ev.eventTime()));
         }
@@ -65,14 +72,14 @@ public class SingleServerInfinitePopulation extends Model{
     private void handleDepartureEvent(){
         customerInSysCount--;
         finishedServicesCount++;
-        if(finishedServicesCount == customerLimit){
-            isModelActive = false;
-            return;
-        }
         if(customerInSysCount > 0){
             waitingCustomer cus = waitQueue.dequeue();
             double waitTime = clock - cus.waitingStartTime();
             startService(cus.customerId(), waitTime);
+            if(cus.customerId() == customerLimit-1){
+                isModelActive = false;
+                return;
+            }
         }
         else{
             serverStatus = 0;
@@ -87,7 +94,8 @@ public class SingleServerInfinitePopulation extends Model{
         fel.schedule(departureEvent);
     }
 
-    protected void printSnapshot(Event ev){
+    protected void printSnapshot(Events e){
+        Event ev = (Event) e;
         StringBuilder systemState = new StringBuilder();
         systemState.append("serverStatus : " + serverStatus);
         systemState.append(", numOfCustomersInTheSystem : " + customerInSysCount);

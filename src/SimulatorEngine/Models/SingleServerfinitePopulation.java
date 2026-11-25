@@ -4,6 +4,7 @@ import Variates.Variate;
 
 import SimulatorEngine.SimEvents.Event;
 import SimulatorEngine.SimEvents.EventType;
+import SimulatorEngine.SimEvents.Events;
 import SimulatorEngine.waitingQueue;
 import SimulatorEngine.waitingQueue.waitingCustomer;
 
@@ -32,24 +33,26 @@ public class SingleServerfinitePopulation extends Model{
         }
     }
 
-    public MetricReport runModel(boolean TRACE_MODE){
-        while(isModelActive){
-            Event nexEvent = (Event) fel.fetch();
-            double last = clock;
-            clock = nexEvent.eventTime();
-            totalCumulativeAreas += (clock - last) * customerInSysCount;
-            if(serverStatus == 1)
-                serverUtilTime += (clock - last);
-            if(nexEvent.type() == EventType.ARRIVAL)
-                handleArrivalEvent(nexEvent);
-            else
-                handleDepartureEvent(nexEvent.customerNumber());
-            if(TRACE_MODE)
-                printSnapshot(nexEvent);
-            if(clock > termSim)
-                isModelActive = false;
-        }
-        return generateReport();
+    protected void updateStatistics(double elapsed){
+        if(serverStatus == 1)
+            serverUtilTime += elapsed;
+    }
+
+    protected MetricReport generateReport(){
+        double averageWaitingTime = totalWaitingTime / finishedServicesCount;
+        double timeAverageNumOfCustomers = totalCumulativeAreas / clock;
+        double[] serverUtilization = { serverUtilTime / clock };
+        return new MetricReport(averageWaitingTime, timeAverageNumOfCustomers, serverUtilization);
+    }
+
+    protected void handleEvent(Events e){
+        Event ev = (Event) e;
+        if(ev.type() == EventType.ARRIVAL)
+            handleArrivalEvent(ev);
+        else
+            handleDepartureEvent(ev.customerNumber());
+        if(clock > termSim)
+            isModelActive = false;
     }
 
     private void handleArrivalEvent(Event ev){
@@ -85,7 +88,8 @@ public class SingleServerfinitePopulation extends Model{
         fel.schedule(departureEvent);
     }
 
-    protected void printSnapshot(Event ev){
+    protected void printSnapshot(Events e){
+        Event ev = (Event) e;
         StringBuilder systemState = new StringBuilder();
         systemState.append("serverStatus : " + serverStatus);
         systemState.append(", numOfCustomersInTheSystem : " + customerInSysCount);
