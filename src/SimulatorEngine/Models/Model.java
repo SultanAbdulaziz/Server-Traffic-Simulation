@@ -3,7 +3,7 @@ package SimulatorEngine.Models;
 import java.util.Arrays;
 
 import SimulatorEngine.FEL;
-import SimulatorEngine.SimEvents.Events;
+import SimulatorEngine.SimEvents.*;
 
 public abstract class Model{
     protected FEL fel;
@@ -45,7 +45,7 @@ public abstract class Model{
             if(TRACE_MODE)
                 printSnapshot(nextEvent);
         }
-        return generateReport();                               
+        return generateReport();
     }
 
     protected abstract void updateStatistics(double elapsed);

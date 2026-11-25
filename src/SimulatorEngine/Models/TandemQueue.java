@@ -2,96 +2,149 @@ package SimulatorEngine.Models;
 
 import SimulatorEngine.SimEvents.*;
 import SimulatorEngine.waitingQueue;
+import SimulatorEngine.waitingQueue.waitingCustomer;
 import Variates.Variate;
 
-public class TandemQueue extends Model{
+public class TandemQueue extends Model {
 
     int stageCount;
     int[] queueCountAtStage;
     int[] serverStatusAtStage;
-
-    private Variate interArrivalVariate;
-    private Variate serviceVariate;
-
-    private int customerLimit;
-    private int lastArrivalCustomerId;
-    private waitingQueue waitQueue;
+    private final waitingQueue[] waitQueues;
+    private final int[] serverUtilTimes;
 
 
-    TandemQueue(Variate interArrivalVariate, Variate serviceVariate, int customerLimit,  int lastArrivalCustomerId){
+    private final Variate interArrivalVariate;
+    private final Variate serviceVariate;
+
+    private final int customerLimit;
+    private int lastArrivalCustomerId = 0;
+
+
+
+    TandemQueue(Variate interArrivalVariate, Variate serviceVariate, int customerLimit, int stageCount) {
         super();
         this.stageCount = stageCount;
-        this.serverStatusAtStage = new int[stageCount];
-        this.queueCountAtStage = new int[stageCount];
+        this.customerLimit = customerLimit;
+
         this.interArrivalVariate = interArrivalVariate;
         this.serviceVariate = serviceVariate;
-        this.customerLimit = customerLimit;
-        this.lastArrivalCustomerId = lastArrivalCustomerId;
-        waitQueue = new waitingQueue();
+
+        this.serverStatusAtStage = new int[stageCount];
+        this.queueCountAtStage = new int[stageCount];
+
+        waitQueues = new waitingQueue[stageCount];
+        for (int i = 0; i < stageCount; i++)
+            waitQueues[i] = new waitingQueue();
+
+        serverUtilTimes = new int[stageCount];
     }
 
     @Override
     public MetricReport runModel(boolean TRACE_MODE) {
-        while(isModelActive){
-            TandemEvent nexEvent = (TandemEvent) fel.fetch();
+        while (isModelActive) {
+            TandemEvent nextEvent = (TandemEvent) fel.fetch();
+
             double last = clock;
-            clock = nexEvent.eventTime();
+            clock = nextEvent.eventTime();
             totalCumulativeAreas += (clock - last) * customerInSysCount;
-            if(serverStatus == 1)
-                serverUtilTime += (clock - last);
-            if(nexEvent.type() == Event.EventType.ARRIVAL)
-                handleArrivalEvent(nexEvent);
+
+            // should be based on the current server
+//            if (serverStatus == 1)
+//                serverUtilTime += (clock - last);
+
+            if (nextEvent.type() == Event.EventType.ARRIVAL)
+                handleArrivalEvent(nextEvent);
+            else if (nextEvent.type() == Event.EventType.TRANSFER)
+                handleTransferEvent(nextEvent);
             else
                 handleDepartureEvent();
-            if(TRACE_MODE)
-                printSnapshot(nexEvent);
+            if (TRACE_MODE)
+                printSnapshot(nextEvent);
+
         }
         return generateReport();
     }
 
     @Override
-    protected void printSnapshot(Event ev) {
+    protected void printSnapshot(Events ev) {
 
     }
 
-    private void handleDepartureAtStage(int leavingStage){}
 
-    private void handleArrivalAtStage(int enteringStage){}
+    private void handleDepartureAtStage(int leavingStage) {
+    }
 
-    private void handleNewArrival(){ //for a NEW customer at the START
+
+    private void handleArrivalAtStage(int enteringStage) {
+    }
+
+
+    //for a NEW customer at the START
+    private void handleNewArrival() {
         customerInSysCount++;
-        double generatedArrivalTime = interArrivalVariate.generateNumber();
-        TandemEvent nextArrival = new TandemEvent(EventType.ARRIVAL, clock+generatedArrivalTime, lastArrivalCustomerId++, 0);
+        double genArrTime = interArrivalVariate.generateNumber();
+
+        //get direct access for the first stage
+        waitingQueue currQueue = waitQueues[0];
+        waitingCustomer queueCus = currQueue.peek();
+
+        // gen a new arrival after we received a new one
+        TandemEvent nextArrival = new TandemEvent(
+                EventType.ARRIVAL, clock + genArrTime,
+                lastArrivalCustomerId++, 0);
+
         fel.schedule(nextArrival);
-        if(serverStatusAtStage[0] == 0){
-            startServiceAtStage(ev.customerNumber(), 0);
-        }else{
-            waitQueue.enqueue(new waitingQueue.waitingCustomer(ev.customerNumber(), ev.eventTime()));
+
+        if (serverStatusAtStage[0] == 0) {
+            startServiceAtStage(queueCus.customerId(), 0, 0);
+        } else {
+            waitingCustomer newCus = new waitingCustomer(nextArrival.customerNumber(), nextArrival.eventTime());
+            currQueue.enqueue(newCus);
         }
     }
 
-    private void startServiceAtStage(int currentStage, double waitTime){ //serve someone at a STAGE
+
+    //serve someone at a STAGE
+    private void startServiceAtStage(int customerId, int currentStage, double waitTime) {
         totalWaitingTime += waitTime;
         serverStatusAtStage[currentStage] = 1;
         double serviceDuration = serviceVariate.generateNumber();
-        TandemEvent departureEvent = new Event(EventType.DEPARTURE, clock+serviceDuration, currentStage);
-        fel.schedule(departureEvent);
+
+        if (currentStage == stageCount - 1) { //they are already at the last stage
+            handleFullDeparture();
+            return;
+        }
+
+        // pass the customer to the next stage
+        TandemEvent downstreamEvent = new TandemEvent(
+                EventType.TRANSFER, clock + serviceDuration,
+                customerId, currentStage + 1);
+
+        fel.schedule(downstreamEvent);
     }
 
-    private void handleFullDeparture(){ //a customer LEAVING at the LAST stage
+
+    //a customer LEAVING at the LAST stage
+    private void handleFullDeparture() {
         customerInSysCount--;
         finishedServicesCount++;
-        if(finishedServicesCount == customerLimit){
+
+        int currStage = stageCount - 1; //so we dont rewrite this 10 times
+        waitingQueue currQueue = waitQueues[currStage];
+
+        if (finishedServicesCount == customerLimit) {
             isModelActive = false;
             return;
         }
-        if(customerInSysCount > 0){
-            waitingQueue.waitingCustomer cus = waitQueue.dequeue();
+
+        if (!currQueue.isEmpty()) { //i dont think this is needed???
+            waitingCustomer cus = currQueue.dequeue();
             double waitTime = clock - cus.waitingStartTime();
-            startService(cus.customerId(), waitTime);
-        }
-        else{
-            serverStatusAtStage[stageCount - 1] = 0;
+
+            startServiceAtStage(cus.customerId(), currStage, waitTime);
+        } else {
+            serverStatusAtStage[currStage] = 0;
         }
     }
 }

@@ -2,9 +2,7 @@ package SimulatorEngine.Models;
 
 import Variates.Variate;
 
-import SimulatorEngine.SimEvents.Event;
-import SimulatorEngine.SimEvents.EventType;
-import SimulatorEngine.SimEvents.Events;
+import SimulatorEngine.SimEvents.*;
 import SimulatorEngine.waitingQueue;
 import SimulatorEngine.waitingQueue.waitingCustomer;
 
@@ -88,13 +86,13 @@ public class SingleServerfinitePopulation extends Model{
         fel.schedule(departureEvent);
     }
 
-    protected void printSnapshot(Events e){
-        Event ev = (Event) e;
+    protected void printSnapshot(Events ev){
+        Event event = (Event) ev;
         StringBuilder systemState = new StringBuilder();
         systemState.append("serverStatus : " + serverStatus);
         systemState.append(", numOfCustomersInTheSystem : " + customerInSysCount);
         System.out.println(
-            String.format("[%f] | [C%d %s] | [%s] | [%s]", clock, ev.customerNumber(), ev.type(), systemState.toString(), fel.toString())
+            String.format("[%f] | [C%d %s] | [%s] | [%s]", clock, event.customerNumber(), event.type(), systemState.toString(), fel.toString())
         );
     }
 }
