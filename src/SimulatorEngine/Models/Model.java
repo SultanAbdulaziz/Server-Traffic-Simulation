@@ -1,8 +1,7 @@
 package SimulatorEngine.Models;
 
 import SimulatorEngine.FEL;
-import SimulatorEngine.SimEvents.Event;
-import SimulatorEngine.SimEvents.EventType;
+import SimulatorEngine.SimEvents.*;
 
 public abstract class Model{
     protected FEL fel;
@@ -29,7 +28,7 @@ public abstract class Model{
 
     public abstract MetricReport runModel(boolean TRACE_MODE);
 
-    protected abstract void printSnapshot(Event ev);
+    protected abstract void printSnapshot(Events ev);
     
     protected MetricReport generateReport(){
         double averageWaitingTime = totalWaitingTime / finishedServicesCount;

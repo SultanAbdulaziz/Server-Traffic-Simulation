@@ -2,7 +2,7 @@ package SimulatorEngine.SimEvents;
 
 import SimExceptions.NullEventException;
 
-public record TandemEvent(EventType type, double eventTime, int stageNum) implements Events {
+public record TandemEvent(EventType type, double eventTime, int customerNumber, int stageNum) implements Events {
 
     @Override
     public int compareTo(Events ev) throws NullEventException {
@@ -18,6 +18,6 @@ public record TandemEvent(EventType type, double eventTime, int stageNum) implem
     }
 
     public String toString() {
-        return String.format("(Stage: %d, %s, %f)", stageNum, type.name(), eventTime);
+        return String.format("(S%d, C%d, %s, %f)", stageNum, customerNumber, type.name(), eventTime);
     }
 }
