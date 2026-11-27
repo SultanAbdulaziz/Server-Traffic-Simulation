@@ -9,11 +9,12 @@ import Variates.Variate;
 
 public class BlockingTandemQueue extends Model {
 
-
     private final int stageCount = 2;
     private final int stageLimit;
     private final int[] serverStatusAtStage;
     private final waitingQueue[] waitQueues;
+
+
     private final double[] serverUtilTimes;
     private final double[] cumulativeAreaAtStage;
 
@@ -23,6 +24,7 @@ public class BlockingTandemQueue extends Model {
 
     private final int customerLimit;
     private int lastArrivalCustomerId = 0;
+    private int isBlocking = 0;
 
 
     public BlockingTandemQueue(Variate interArrivalVariate, Variate serviceVariate, int customerLimit, int stageLimit) {
@@ -105,7 +107,7 @@ public class BlockingTandemQueue extends Model {
             // brand-new arrival
             case EventType.ARRIVAL -> handleNewArrival(event);
             //finished serving, handoff
-            case EventType.DEPARTURE -> handleDepartureAtStage(eventStage, event);
+            case EventType.END_OF_SERVICE -> handleDepartureAtStage(eventStage, event);
 
             default -> throw new NullEventException("Invalid Event in FEL");
         }
@@ -181,7 +183,7 @@ public class BlockingTandemQueue extends Model {
 
 
         TandemEvent downstreamEvent = new TandemEvent(
-                EventType.DEPARTURE, clock + serviceDuration,
+                EventType.END_OF_SERVICE, clock + serviceDuration,
                 customerId, currentStage);
 
         fel.schedule(downstreamEvent);
