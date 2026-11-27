@@ -1,6 +1,7 @@
 package SimulatorEngine;
 
 import java.util.ArrayDeque;
+import java.util.Deque;
 
 public class waitingQueue {
 
@@ -13,7 +14,7 @@ public class waitingQueue {
         }
     }
 
-    public ArrayDeque<waitingCustomer> queue;
+    public Deque<waitingCustomer> queue;
 
     public boolean isEmpty() {
         return queue.isEmpty();
