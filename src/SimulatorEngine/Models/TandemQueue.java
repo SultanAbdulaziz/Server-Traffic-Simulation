@@ -8,8 +8,8 @@ import Variates.Variate;
 
 public class TandemQueue extends Model {
 
-    int stageCount;
-    int[] serverStatusAtStage;
+    private final int stageCount;
+    private final int[] serverStatusAtStage;
     private final waitingQueue[] waitQueues;
     private final double[] serverUtilTimes;
     private final double[] cumulativeAreaAtStage;
@@ -67,7 +67,14 @@ public class TandemQueue extends Model {
 
     @Override
     protected MetricReport generateReport() {
-        return null;
+        double averageWaitingTime = totalWaitingTime / finishedServicesCount;
+        double timeAverageNumOfCustomers = totalCumulativeAreas / clock;
+
+        double[] serverUtilization = new double[stageCount];
+        for (int i = 0; i < stageCount; i++)
+            serverUtilization[i] = serverUtilTimes[i] / clock;
+
+        return new MetricReport(averageWaitingTime, timeAverageNumOfCustomers, serverUtilization);
     }
 
     protected void updateStatistics(double elapsed) {
@@ -177,7 +184,7 @@ public class TandemQueue extends Model {
     }
 
 
-    double[] getStationAverages() {
+    public double[] getStationAverages() {
         double[] averages = new double[stageCount];
 
         for (int i = 0; i < stageCount; i++)
