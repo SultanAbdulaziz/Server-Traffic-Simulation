@@ -9,7 +9,6 @@ import Variates.Variate;
 public class TandemQueue extends Model {
 
     int stageCount;
-    int[] queueCountAtStage;
     int[] serverStatusAtStage;
     private final waitingQueue[] waitQueues;
     private final double[] serverUtilTimes;
@@ -32,7 +31,6 @@ public class TandemQueue extends Model {
         this.serviceVariate = serviceVariate;
 
         this.serverStatusAtStage = new int[stageCount];
-        this.queueCountAtStage = new int[stageCount];
 
         waitQueues = new waitingQueue[stageCount];
         for (int i = 0; i < stageCount; i++)
@@ -54,7 +52,17 @@ public class TandemQueue extends Model {
 
     @Override
     protected void printSnapshot(Events ev) {
+        TandemEvent event = (TandemEvent) ev;
 
+        StringBuilder state = new StringBuilder("n : " + customerInSysCount);
+        for (int i = 0; i < stageCount; i++) {
+            state.append(String.format(", S%d[status : %d, queue : %d]",
+                    i, serverStatusAtStage[i], waitQueues[i].count()));
+        }
+
+        System.out.println(String.format("[%f] | [C%d %s @S%d] | [%s] | [%s]",
+                clock, event.customerNumber(), event.type(), event.stageNum(),
+                state, fel.toString()));
     }
 
     @Override
@@ -64,9 +72,13 @@ public class TandemQueue extends Model {
 
     protected void updateStatistics(double elapsed) {
         for (int i = 0; i < stageCount; i++) {
-            if (serverStatusAtStage[i] == 1)
+            int status = serverStatusAtStage[i];
+
+            if (status == 1)
                 serverUtilTimes[i] += elapsed;
-            cumulativeAreaAtStage[i] += elapsed * queueCountAtStage[i];
+            int countAtServer = waitQueues[i].count() + status;
+
+            cumulativeAreaAtStage[i] += elapsed * countAtServer;
         }
     }
 
@@ -82,20 +94,19 @@ public class TandemQueue extends Model {
             // brand-new arrival
             case EventType.ARRIVAL -> handleNewArrival(event);
             //finished serving, handoff
-            case EventType.DEPARTURE -> handleDepartureAtStage(eventStage);
+            case EventType.DEPARTURE -> handleDepartureAtStage(eventStage, event);
 
             default -> throw new NullEventException("Invalid Event in FEL");
         }
     }
 
 
-    private void handleDepartureAtStage(int currentStage) {
+    private void handleDepartureAtStage(int currentStage, TandemEvent ev) {
 
         waitingQueue currQueue = waitQueues[currentStage];
 
         if (!currQueue.isEmpty()) { //someone is waiting, move them in
             //handle waiting customer
-            serverStatusAtStage[currentStage] = 1;
             waitingCustomer cus = currQueue.dequeue();
             double waitTime = clock - cus.waitingStartTime();
 
@@ -112,6 +123,8 @@ public class TandemQueue extends Model {
             // reached the stopping condition
             if (finishedServicesCount == customerLimit)
                 isModelActive = false;
+        } else {
+            handleArrivalAtStage(currentStage + 1, ev);
         }
 
     }
@@ -121,11 +134,10 @@ public class TandemQueue extends Model {
 
         //get direct access for the stage
         waitingQueue currQueue = waitQueues[arrivalStage];
-        waitingCustomer queueCus = currQueue.peek();
 
         //someone at the stage?
-        if (serverStatusAtStage[arrivalStage] == 0 && queueCus != null) { //no
-            startServiceAtStage(queueCus.customerId(), arrivalStage, 0);
+        if (serverStatusAtStage[arrivalStage] == 0) { //no
+            startServiceAtStage(ev.customerNumber(), arrivalStage, 0);
         } else { //yes, make em wait
             waitingCustomer newCus = new waitingCustomer(ev.customerNumber(), ev.eventTime());
             currQueue.enqueue(newCus);
@@ -138,10 +150,6 @@ public class TandemQueue extends Model {
         customerInSysCount++;
         double genArrTime = interArrivalVariate.generateNumber();
 
-        //get direct access for the first stage
-        waitingQueue currQueue = waitQueues[0];
-        waitingCustomer queueCus = currQueue.peek();
-
         // gen a new arrival after we received a new one
         TandemEvent nextArrival = new TandemEvent(
                 EventType.ARRIVAL, clock + genArrTime,
@@ -150,12 +158,7 @@ public class TandemQueue extends Model {
 
         fel.schedule(nextArrival);
 
-        if (serverStatusAtStage[0] == 0) {
-            startServiceAtStage(queueCus.customerId(), 0, 0);
-        } else {
-            waitingCustomer newCus = new waitingCustomer(incomingEv.customerNumber(), incomingEv.eventTime());
-            currQueue.enqueue(newCus);
-        }
+        handleArrivalAtStage(0, incomingEv);
     }
 
 
@@ -171,5 +174,15 @@ public class TandemQueue extends Model {
                 customerId, currentStage);
 
         fel.schedule(downstreamEvent);
+    }
+
+
+    double[] getStationAverages() {
+        double[] averages = new double[stageCount];
+
+        for (int i = 0; i < stageCount; i++)
+            averages[i] = cumulativeAreaAtStage[i] / clock;
+
+        return averages;
     }
 }
