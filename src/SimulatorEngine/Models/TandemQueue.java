@@ -6,6 +6,8 @@ import SimulatorEngine.waitingQueue;
 import SimulatorEngine.waitingQueue.waitingCustomer;
 import Variates.Variate;
 
+import java.util.Deque;
+
 public class TandemQueue extends Model {
 
     private final int stageCount;
@@ -21,6 +23,9 @@ public class TandemQueue extends Model {
     private final int customerLimit;
     private int lastArrivalCustomerId = 0;
 
+    private final Deque<Double> arrivalTimes;
+    private double totalSysTime;
+
 
     public TandemQueue(Variate interArrivalVariate, Variate serviceVariate, int customerLimit, int stageCount) {
         super();
@@ -31,6 +36,9 @@ public class TandemQueue extends Model {
         this.serviceVariate = serviceVariate;
 
         this.serverStatusAtStage = new int[stageCount];
+
+        this.totalSysTime = 0;
+        this.arrivalTimes = new java.util.ArrayDeque<>();
 
         waitQueues = new waitingQueue[stageCount];
         for (int i = 0; i < stageCount; i++)
@@ -47,6 +55,7 @@ public class TandemQueue extends Model {
                         0
                 )
         );
+        arrivalTimes.add(clock);
     }
 
 
@@ -74,7 +83,9 @@ public class TandemQueue extends Model {
         for (int i = 0; i < stageCount; i++)
             serverUtilization[i] = serverUtilTimes[i] / clock;
 
-        return new MetricReport(averageWaitingTime, timeAverageNumOfCustomers, serverUtilization);
+        double averageSystemTime = totalSysTime / finishedServicesCount;
+
+        return new MetricReport(averageWaitingTime, timeAverageNumOfCustomers, serverUtilization, averageSystemTime);
     }
 
     protected void updateStatistics(double elapsed) {
@@ -126,6 +137,7 @@ public class TandemQueue extends Model {
         if (currentStage == stageCount - 1) {
             customerInSysCount--;
             finishedServicesCount++;
+            addLifeTime();
 
             // reached the stopping condition
             if (finishedServicesCount == customerLimit)
@@ -156,6 +168,7 @@ public class TandemQueue extends Model {
     private void handleNewArrival(TandemEvent incomingEv) {
         customerInSysCount++;
         double genArrTime = interArrivalVariate.generateNumber();
+        arrivalTimes.add(clock + genArrTime);
 
         // gen a new arrival after we received a new one
         TandemEvent nextArrival = new TandemEvent(
@@ -181,6 +194,11 @@ public class TandemQueue extends Model {
                 customerId, currentStage);
 
         fel.schedule(downstreamEvent);
+    }
+
+    private void addLifeTime() {
+        double arrival = arrivalTimes.poll();
+        totalSysTime += clock - arrival;
     }
 
 

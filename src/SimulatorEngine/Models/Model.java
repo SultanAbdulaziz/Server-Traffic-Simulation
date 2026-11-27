@@ -23,15 +23,25 @@ public abstract class Model{
     }
 
     public record MetricReport(
-        double averageWaitingTime,
-        double timeAverageNumOfCustomers,
-        double[] serverUtilization // one entry per server
-     ){
-        public String toString(){
-            return String.format("MetricReport[averageWaitingTime=%f, timeAverageNumOfCustomers=%f, serverUtilization=%s]",
-                averageWaitingTime, timeAverageNumOfCustomers, Arrays.toString(serverUtilization));
+            double averageWaitingTime,
+            double timeAverageNumOfCustomers,
+            double[] serverUtilization, // one entry per server
+            double averageSystemTime    // r_bar; NaN for models that don't measure it
+    ) {
+        public MetricReport(double averageWaitingTime, double timeAverageNumOfCustomers, double[] serverUtilization) {
+            this(averageWaitingTime, timeAverageNumOfCustomers, serverUtilization, Double.NaN);
         }
-     }
+
+        @Override
+        public String toString() {
+            String rBar = Double.isNaN(averageSystemTime)
+                    ? ""
+                    : String.format(", averageSystemTime=%f", averageSystemTime);
+
+            return String.format("MetricReport[averageWaitingTime=%f, timeAverageNumOfCustomers=%f%s, serverUtilization=%s]",
+                    averageWaitingTime, timeAverageNumOfCustomers, rBar, Arrays.toString(serverUtilization));
+        }
+    }
 
     public MetricReport runModel(boolean TRACE_MODE){
         while(isModelActive){
