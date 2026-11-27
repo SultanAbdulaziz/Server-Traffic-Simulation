@@ -3,5 +3,5 @@ package SimulatorEngine.SimEvents;
 public enum EventType{
     ARRIVAL,
     DEPARTURE,
-    TRANSFER
+    END_OF_SERVICE
 }
