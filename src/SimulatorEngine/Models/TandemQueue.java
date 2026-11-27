@@ -81,9 +81,7 @@ public class TandemQueue extends Model {
         switch (currType) {
             // brand-new arrival
             case EventType.ARRIVAL -> handleNewArrival(event);
-            //downstream hand off
-            case EventType.TRANSFER -> handleArrivalAtStage(eventStage, event);
-            //finished serving
+            //finished serving, handoff
             case EventType.DEPARTURE -> handleDepartureAtStage(eventStage);
 
             default -> throw new NullEventException("Invalid Event in FEL");
@@ -91,40 +89,43 @@ public class TandemQueue extends Model {
     }
 
 
-    private void handleDepartureAtStage(int leavingStage) {
+    private void handleDepartureAtStage(int currentStage) {
 
-        int currStage = leavingStage; //aliasing
-        waitingQueue currQueue = waitQueues[currStage];
+        waitingQueue currQueue = waitQueues[currentStage];
 
-        if (!currQueue.isEmpty()) {
+        if (!currQueue.isEmpty()) { //someone is waiting, move them in
             //handle waiting customer
-            serverStatusAtStage[currStage] = 1;
+            serverStatusAtStage[currentStage] = 1;
             waitingCustomer cus = currQueue.dequeue();
             double waitTime = clock - cus.waitingStartTime();
 
-            startServiceAtStage(cus.customerId(), currStage, waitTime);
-        } else {
-            serverStatusAtStage[currStage] = 0;
+            startServiceAtStage(cus.customerId(), currentStage, waitTime);
+        } else { // no one is waiting, free them
+            serverStatusAtStage[currentStage] = 0;
         }
+
+        // last stage
+        if (currentStage == stageCount - 1) {
+            customerInSysCount--;
+            finishedServicesCount++;
+
+            // reached the stopping condition
+            if (finishedServicesCount == customerLimit)
+                isModelActive = false;
+        }
+
     }
 
 
-    private void handleArrivalAtStage(int enteringStage, TandemEvent ev) {
-
-        int currStage = enteringStage; //just aliasing for readability
-
-        if (currStage == stageCount - 1) {
-            handleFullDeparture();
-            return;
-        }
+    private void handleArrivalAtStage(int arrivalStage, TandemEvent ev) {
 
         //get direct access for the stage
-        waitingQueue currQueue = waitQueues[currStage];
+        waitingQueue currQueue = waitQueues[arrivalStage];
         waitingCustomer queueCus = currQueue.peek();
 
         //someone at the stage?
-        if (serverStatusAtStage[currStage] == 0 && queueCus != null) { //no
-            startServiceAtStage(queueCus.customerId(), currStage, 0);
+        if (serverStatusAtStage[arrivalStage] == 0 && queueCus != null) { //no
+            startServiceAtStage(queueCus.customerId(), arrivalStage, 0);
         } else { //yes, make em wait
             waitingCustomer newCus = new waitingCustomer(ev.customerNumber(), ev.eventTime());
             currQueue.enqueue(newCus);
@@ -164,41 +165,11 @@ public class TandemQueue extends Model {
         serverStatusAtStage[currentStage] = 1;
         double serviceDuration = serviceVariate.generateNumber();
 
-        if (currentStage == stageCount - 1) { //they are already at the last stage
-            handleFullDeparture();
-            return;
-        }
 
-        // pass the customer to the next stage
         TandemEvent downstreamEvent = new TandemEvent(
-                EventType.TRANSFER, clock + serviceDuration,
-                customerId, currentStage + 1);
+                EventType.DEPARTURE, clock + serviceDuration,
+                customerId, currentStage);
 
         fel.schedule(downstreamEvent);
-    }
-
-
-    //a customer LEAVING at the LAST stage
-    private void handleFullDeparture() {
-        customerInSysCount--;
-        finishedServicesCount++;
-
-        int currStage = stageCount - 1; //so we dont rewrite this 10 times
-        waitingQueue currQueue = waitQueues[currStage];
-
-        if (!currQueue.isEmpty()) { //i dont think this is needed???
-            serverStatusAtStage[currStage] = 1;
-            waitingCustomer cus = currQueue.dequeue();
-            double waitTime = clock - cus.waitingStartTime();
-
-            startServiceAtStage(cus.customerId(), currStage, waitTime);
-        } else {
-            serverStatusAtStage[currStage] = 0;
-        }
-
-        // stopping condition
-        if (finishedServicesCount == customerLimit)
-            isModelActive = false;
-
     }
 }
