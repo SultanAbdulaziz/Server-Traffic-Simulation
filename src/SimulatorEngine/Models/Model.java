@@ -36,9 +36,9 @@ public abstract class Model{
         public String toString() {
             String rBar = Double.isNaN(averageSystemTime)
                     ? ""
-                    : String.format(", averageSystemTime=%f", averageSystemTime);
+                    : String.format(", averageSystemTime=%.3f", averageSystemTime);
 
-            return String.format("MetricReport[averageWaitingTime=%f, timeAverageNumOfCustomers=%f%s, serverUtilization=%s]",
+            return String.format("MetricReport[averageWaitingTime=%.3f, timeAverageNumOfCustomers=%.3f%s, serverUtilization=%s]",
                     averageWaitingTime, timeAverageNumOfCustomers, rBar, Arrays.toString(serverUtilization));
         }
     }
