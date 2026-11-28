@@ -60,12 +60,32 @@ void main() {
 }
 
 Variate readVariate(InputHandler ih, String name) {
-    ih.display("Distribution for " + name, new String[]{"Exponential", "Continuous Uniform"});
-    int type = ih.getInt("Choose: ", 1, 2);
+    ih.display("Distribution for " + name, new String[]{"Exponential", "Continuous Uniform", "Deterministic (fixed values)"});
+    int type = ih.getInt("Choose: ", 1, 3);
+    if (type == 3)
+        return new Deterministic(readValues(ih));
     int seed = ih.getInt("Seed: ", 1, Integer.MAX_VALUE - 1);
     if (type == 1)
         return new Exponential(seed, ih.getDouble("Rate (lambda): ", 1e-9, Double.MAX_VALUE));
     double a = ih.getDouble("a: ", 0, Double.MAX_VALUE);
     double b = ih.getDouble("b: ", a, Double.MAX_VALUE);
     return new ContinousUniform(seed, a, b);
+}
+
+// reads values like "8 6 1 8" or "8, 6, 1, 8"
+double[] readValues(InputHandler ih) {
+    while (true) {
+        String[] parts = ih.getString("Values (separated by spaces or commas): ").split("[,\\s]+");
+        try {
+            double[] values = new double[parts.length];
+            for (int i = 0; i < parts.length; i++) {
+                values[i] = Double.parseDouble(parts[i]);
+                if (values[i] < 0)
+                    throw new NumberFormatException();
+            }
+            return values;
+        } catch (NumberFormatException e) {
+            System.out.println("[ERROR] Enter non-negative numbers only, e.g. 8 6 1 8");
+        }
+    }
 }

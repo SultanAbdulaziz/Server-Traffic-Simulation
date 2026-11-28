@@ -22,7 +22,7 @@ public class SingleServerInfinitePopulation extends Model{
     private double totalSysTime;
 
 
-    public SingleServerInfinitePopulation(Variate interArrivalVariate, Variate serviceVariate, int customerLimit){
+    public SingleServerInfinitePopulation(Variate interArrivalVariate, Variate serviceVariate, int customerLimit) {
         super();
         this.serverStatus = 0;
         this.interArrivalVariate = interArrivalVariate;
