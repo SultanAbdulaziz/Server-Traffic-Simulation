@@ -157,7 +157,9 @@ public class BlockingTandemQueue extends Model {
         if (serverStatusAtStage[arrivalStage] == 0) { //no
             startServiceAtStage(ev.customerNumber(), arrivalStage, 0);
         } else { //yes, make em wait
-            waitingCustomer newCus = new waitingCustomer(ev.customerNumber(), ev.eventTime());
+            // use clock, not ev.eventTime(): a customer released from a blocked server 1
+            // joins this line now; the time spent blocked counts as server-1 time, not waiting
+            waitingCustomer newCus = new waitingCustomer(ev.customerNumber(), clock);
             currQueue.enqueue(newCus);
         }
     }
