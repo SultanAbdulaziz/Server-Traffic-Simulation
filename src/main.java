@@ -10,7 +10,7 @@ void main() {
             "Single Server Infinite Population (Task 1)",
             "Single Server Finite Population (Task 2)",
             "M-Stages Tandem Queue (Task 3)",
-            "UNDEFINED CURRENTLY (Task 4)",
+            "Tandem Queue with Blocking (Task 4)",
             "Closed Network (Task 5)"
     });
     int choice = ih.getInt("Choose: ", 1, 5);
@@ -34,6 +34,12 @@ void main() {
                 ih.getInt("Customer limit m: ", 1, Integer.MAX_VALUE),
                 ih.getInt("Stage count M: ", 2, Integer.MAX_VALUE / 2)
                 );
+
+        case 4 -> new BlockingTandemQueue(
+                readVariate(ih, "inter-arrival time"),
+                readVariate(ih, "service time"),
+                ih.getInt("Customer limit m: ", 1, Integer.MAX_VALUE),
+                ih.getInt("Stage 2 capacity K: ", 1, Integer.MAX_VALUE));
 
         case 5 -> {
             Variate[] services = new Variate[4];

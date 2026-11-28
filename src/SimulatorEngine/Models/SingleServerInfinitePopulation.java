@@ -1,5 +1,7 @@
 package SimulatorEngine.Models;
 
+import java.util.HashMap;
+
 import Variates.Variate;
 
 import SimulatorEngine.SimEvents.*;

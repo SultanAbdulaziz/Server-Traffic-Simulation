@@ -1,20 +1,19 @@
 package SimulatorEngine.Models;
 
 import SimExceptions.NullEventException;
-import SimulatorEngine.SimEvents.EventType;
-import SimulatorEngine.SimEvents.Events;
-import SimulatorEngine.SimEvents.TandemEvent;
+import SimulatorEngine.SimEvents.*;
 import SimulatorEngine.waitingQueue;
+import SimulatorEngine.waitingQueue.waitingCustomer;
 import Variates.Variate;
 
 public class BlockingTandemQueue extends Model {
 
-    private final int stageCount = 2;
-    private final int stageLimit;
+    private final int stageCount;
+    private final int stage2Capacity;
+    private int isServerBlocked;
+    private TandemEvent blockedEvent;
     private final int[] serverStatusAtStage;
     private final waitingQueue[] waitQueues;
-
-
     private final double[] serverUtilTimes;
     private final double[] cumulativeAreaAtStage;
 
@@ -24,13 +23,14 @@ public class BlockingTandemQueue extends Model {
 
     private final int customerLimit;
     private int lastArrivalCustomerId = 0;
-    private int isBlocking = 0;
 
 
-    public BlockingTandemQueue(Variate interArrivalVariate, Variate serviceVariate, int customerLimit, int stageLimit) {
+    public BlockingTandemQueue(Variate interArrivalVariate, Variate serviceVariate, int customerLimit, int stage2Capacity) {
         super();
+        this.stageCount = 2;
+        this.stage2Capacity = stage2Capacity;
         this.customerLimit = customerLimit;
-        this.stageLimit = stageLimit;
+        this.isServerBlocked = 0;
 
         this.interArrivalVariate = interArrivalVariate;
         this.serviceVariate = serviceVariate;
@@ -40,7 +40,6 @@ public class BlockingTandemQueue extends Model {
         waitQueues = new waitingQueue[stageCount];
         for (int i = 0; i < stageCount; i++)
             waitQueues[i] = new waitingQueue();
-
 
         serverUtilTimes = new double[stageCount];
         cumulativeAreaAtStage = new double[stageCount];
@@ -65,6 +64,7 @@ public class BlockingTandemQueue extends Model {
             state.append(String.format(", S%d[status : %d, queue : %d]",
                     i, serverStatusAtStage[i], waitQueues[i].count()));
         }
+        state.append(", isServerBlocked : " + isServerBlocked);
 
         System.out.println(String.format("[%f] | [C%d %s @S%d] | [%s] | [%s]",
                 clock, event.customerNumber(), event.type(), event.stageNum(),
@@ -107,7 +107,9 @@ public class BlockingTandemQueue extends Model {
             // brand-new arrival
             case EventType.ARRIVAL -> handleNewArrival(event);
             //finished serving, handoff
-            case EventType.END_OF_SERVICE -> handleDepartureAtStage(eventStage, event);
+            case EventType.END_OF_SERVICE -> handleEndOfService(event);
+
+            case EventType.DEPARTURE -> handleDepartureAtStage(eventStage, event);
 
             default -> throw new NullEventException("Invalid Event in FEL");
         }
@@ -120,7 +122,7 @@ public class BlockingTandemQueue extends Model {
 
         if (!currQueue.isEmpty()) { //someone is waiting, move them in
             //handle waiting customer
-            waitingQueue.waitingCustomer cus = currQueue.dequeue();
+            waitingCustomer cus = currQueue.dequeue();
             double waitTime = clock - cus.waitingStartTime();
 
             startServiceAtStage(cus.customerId(), currentStage, waitTime);
@@ -129,9 +131,13 @@ public class BlockingTandemQueue extends Model {
         }
 
         // last stage
-        if (currentStage == stageCount - 1) {
+        if (currentStage == 1) {
             customerInSysCount--;
             finishedServicesCount++;
+            if(isServerBlocked == 1){
+            isServerBlocked = 0;
+            handleDepartureAtStage(0, blockedEvent);
+        }
 
             // reached the stopping condition
             if (finishedServicesCount == customerLimit)
@@ -139,7 +145,6 @@ public class BlockingTandemQueue extends Model {
         } else {
             handleArrivalAtStage(currentStage + 1, ev);
         }
-
     }
 
 
@@ -152,7 +157,7 @@ public class BlockingTandemQueue extends Model {
         if (serverStatusAtStage[arrivalStage] == 0) { //no
             startServiceAtStage(ev.customerNumber(), arrivalStage, 0);
         } else { //yes, make em wait
-            waitingQueue.waitingCustomer newCus = new waitingQueue.waitingCustomer(ev.customerNumber(), ev.eventTime());
+            waitingCustomer newCus = new waitingCustomer(ev.customerNumber(), ev.eventTime());
             currQueue.enqueue(newCus);
         }
     }
@@ -174,6 +179,15 @@ public class BlockingTandemQueue extends Model {
         handleArrivalAtStage(0, incomingEv);
     }
 
+    private void handleEndOfService(TandemEvent incomingEv) {
+        if((waitQueues[1].count() + serverStatusAtStage[1]) >= stage2Capacity){
+            isServerBlocked = 1;
+            blockedEvent = incomingEv;
+        }
+        else
+            handleDepartureAtStage(incomingEv.stageNum(), incomingEv);
+    }
+
 
     //serve someone at a STAGE
     private void startServiceAtStage(int customerId, int currentStage, double waitTime) {
@@ -181,9 +195,14 @@ public class BlockingTandemQueue extends Model {
         serverStatusAtStage[currentStage] = 1;
         double serviceDuration = serviceVariate.generateNumber();
 
+        EventType nextEventType;
+        if(currentStage == 0)
+            nextEventType = EventType.END_OF_SERVICE;
+        else
+            nextEventType = EventType.DEPARTURE;
 
         TandemEvent downstreamEvent = new TandemEvent(
-                EventType.END_OF_SERVICE, clock + serviceDuration,
+                nextEventType, clock + serviceDuration,
                 customerId, currentStage);
 
         fel.schedule(downstreamEvent);
